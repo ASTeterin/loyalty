@@ -6,13 +6,7 @@ import (
 )
 
 var (
-	ErrUserNotFound = errors.New("url not found")
-	ErrDuplicateURL = errors.New("duplicate url")
-)
-
-const (
-	ShortURLLen = 8
-	Letters     = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	ErrUserNotFound = errors.New("user not found")
 )
 
 type BatchDeleteResult struct {
@@ -28,7 +22,7 @@ type User struct {
 
 type UserRepository interface {
 	NextUserID() (uuid.UUID, error)
-	Store(user User) (*string, error)
+	Store(user User) error
 	GetByLogin(login string) (*User, error)
 }
 

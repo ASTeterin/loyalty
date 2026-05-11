@@ -7,31 +7,25 @@ import (
 	"github.com/ASTeterin/loyalty/internal/model"
 )
 
-const batchSize = 50
-
 var (
 	ErrUserExists = errors.New("user already exists")
 )
 
-type ShortenerService interface {
+type UserService interface {
 	Register(originalURL, userID string) (*string, error)
 }
 
-func NewShortenerService(repo model.UserRepository, maxWorkers int) ShortenerService {
-	return &shortenerService{
-		repo:       repo,
-		maxWorkers: maxWorkers,
-		batchSize:  batchSize,
+func NewUserService(repo model.UserRepository) UserService {
+	return &userService{
+		repo: repo,
 	}
 }
 
-type shortenerService struct {
-	repo       model.UserRepository
-	batchSize  int
-	maxWorkers int
+type userService struct {
+	repo model.UserRepository
 }
 
-func (s *shortenerService) Register(login, password string) (*string, error) {
+func (s *userService) Register(login, password string) (*string, error) {
 	_, err := s.repo.GetByLogin(login)
 	if err != nil {
 		if errors.Is(err, model.ErrUserNotFound) {
@@ -44,8 +38,11 @@ func (s *shortenerService) Register(login, password string) (*string, error) {
 				return nil, err2
 			}
 			user := model.NewUser(id, login, hash)
-			return s.repo.Store(user)
+			err2 = s.repo.Store(user)
+			strID := id.String()
+			return &strID, err2
 		}
+		return nil, err
 	}
 	return nil, ErrUserExists
 }
