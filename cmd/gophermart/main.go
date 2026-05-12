@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"github.com/ASTeterin/loyalty/internal/cookie"
 	"github.com/ASTeterin/loyalty/internal/handler"
 	db "github.com/ASTeterin/loyalty/internal/repository"
@@ -23,7 +22,6 @@ import (
 func main() {
 	config := appConfig.ParseFlags()
 	var dbConn *sql.DB
-	fmt.Println("!!!!!!!!", config.DBConnStr)
 	dbConn, err := sql.Open("pgx", config.DBConnStr)
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
@@ -40,6 +38,9 @@ func main() {
 
 	r.POST("/api/user/register", func(c *gin.Context) {
 		h.Register(c)
+	})
+	r.POST("/api/user/login", func(c *gin.Context) {
+		h.Authenticate(c)
 	})
 	if err := r.Run(config.AppAddr); err != nil {
 		log.Fatalf("failed to run server: %v", err)

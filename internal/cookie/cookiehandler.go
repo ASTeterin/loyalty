@@ -3,6 +3,7 @@ package cookie
 import (
 	"fmt"
 	"net/http"
+	"slices"
 
 	"time"
 
@@ -15,10 +16,16 @@ const (
 	userIDKey  = "user_id"
 
 	registerURL = "/api/user/register"
+	loginURL    = "/api/user/login"
 )
 
 var (
 	cookieExpiry = 7 * 24 * time.Hour
+
+	noAuthRoutes = []string{
+		registerURL,
+		loginURL,
+	}
 )
 
 type Claims struct {
@@ -28,7 +35,7 @@ type Claims struct {
 
 func CookieHandler(signingKey string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if c.Request.RequestURI == registerURL {
+		if slices.Contains(noAuthRoutes, c.Request.RequestURI) {
 			c.Next()
 			fmt.Println("############3", c.Keys)
 			setCookie(c, signingKey)
@@ -66,6 +73,10 @@ func GetUserKey() string {
 func setCookie(c *gin.Context, signingKey string) {
 	rawUserID, exist := c.Get(GetUserKey())
 	fmt.Println(exist)
+	if !exist {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
 	userID := rawUserID.(string)
 	fmt.Println("userID", userID)
 	if userID == "" {
