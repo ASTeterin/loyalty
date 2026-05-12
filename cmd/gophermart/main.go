@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/ASTeterin/loyalty/internal/cookie"
 	"github.com/ASTeterin/loyalty/internal/handler"
 	db "github.com/ASTeterin/loyalty/internal/repository"
 	"github.com/ASTeterin/loyalty/internal/service"
@@ -35,6 +36,7 @@ func main() {
 	h := handler.NewHandler(userService)
 
 	r := gin.Default()
+	r.Use(cookie.CookieHandler(config.SigningKey))
 
 	r.POST("/api/user/register", func(c *gin.Context) {
 		h.Register(c)

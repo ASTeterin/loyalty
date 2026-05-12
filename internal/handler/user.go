@@ -2,7 +2,7 @@ package handler
 
 import (
 	"errors"
-	"fmt"
+	"github.com/ASTeterin/loyalty/internal/cookie"
 	"github.com/ASTeterin/loyalty/internal/service"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -31,8 +31,7 @@ func (h *handler) Register(c *gin.Context) {
 	body := User{}
 	err := c.ShouldBindBodyWithJSON(&body)
 	userID, err := h.service.Register(body.Login, body.PassHash)
-	fmt.Println(err)
-	fmt.Println(userID)
+
 	if err != nil {
 		if errors.Is(err, service.ErrUserExists) {
 			c.AbortWithStatus(http.StatusConflict)
@@ -42,6 +41,7 @@ func (h *handler) Register(c *gin.Context) {
 		return
 	}
 
+	c.Set(cookie.GetUserKey(), userID)
 	c.Header("Content-Type", "application/json")
 	c.Data(http.StatusOK, "text/plain", []byte(*userID))
 }
