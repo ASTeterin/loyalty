@@ -44,6 +44,7 @@ func CookieHandler(signingKey string) gin.HandlerFunc {
 
 		var userID string
 		authHeader := c.GetHeader(cookieName)
+		fmt.Println("HHHHH", authHeader)
 		if authHeader != "" {
 			token, err := jwt.ParseWithClaims(authHeader, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -52,8 +53,12 @@ func CookieHandler(signingKey string) gin.HandlerFunc {
 				return []byte(signingKey), nil
 			})
 
+			fmt.Println("token", token)
+
 			if err == nil && token.Valid {
+				fmt.Println(token.Claims)
 				claims := token.Claims.(*Claims)
+				fmt.Println("UUU", claims.UserID)
 				userID = claims.UserID
 				c.Set(GetUserKey(), userID)
 				c.Next()
@@ -85,11 +90,11 @@ func setCookie(c *gin.Context, signingKey string) {
 	}
 
 	claims := &Claims{
-		UserID: "",
+		UserID: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Subject:   "",
+			Subject:   userID,
 		},
 	}
 

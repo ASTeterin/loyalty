@@ -30,8 +30,10 @@ func main() {
 	//migrateDB(dbConn)
 	repo := db.NewUserRepository(dbConn)
 	userService := service.NewUserService(repo)
+	orderRepo := db.NewOrderRepository(dbConn)
+	orderService := service.NewOrderService(orderRepo)
 
-	h := handler.NewHandler(userService)
+	h := handler.NewHandler(userService, orderService)
 
 	r := gin.Default()
 	r.Use(cookie.CookieHandler(config.SigningKey))
@@ -41,6 +43,9 @@ func main() {
 	})
 	r.POST("/api/user/login", func(c *gin.Context) {
 		h.Authenticate(c)
+	})
+	r.POST("/api/user/orders", func(c *gin.Context) {
+		h.CreateOrder(c)
 	})
 	if err := r.Run(config.AppAddr); err != nil {
 		log.Fatalf("failed to run server: %v", err)

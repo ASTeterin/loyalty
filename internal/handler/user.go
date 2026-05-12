@@ -7,10 +7,13 @@ import (
 	"github.com/ASTeterin/loyalty/internal/service"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strconv"
+	"unicode"
 )
 
 type handler struct {
-	service service.UserService
+	userService  service.UserService
+	orderService service.OrderService
 }
 
 type User struct {
@@ -21,18 +24,20 @@ type User struct {
 type Handler interface {
 	Register(c *gin.Context)
 	Authenticate(c *gin.Context)
+	CreateOrder(c *gin.Context)
 }
 
-func NewHandler(service service.UserService) Handler {
+func NewHandler(userService service.UserService, orderService service.OrderService) Handler {
 	return &handler{
-		service: service,
+		userService:  userService,
+		orderService: orderService,
 	}
 }
 
 func (h *handler) Register(c *gin.Context) {
 	body := User{}
 	err := c.ShouldBindBodyWithJSON(&body)
-	userID, err := h.service.Register(body.Login, body.PassHash)
+	userID, err := h.userService.Register(body.Login, body.PassHash)
 
 	if err != nil {
 		fmt.Println(err)
@@ -52,7 +57,7 @@ func (h *handler) Register(c *gin.Context) {
 func (h *handler) Authenticate(c *gin.Context) {
 	body := User{}
 	err := c.ShouldBindBodyWithJSON(&body)
-	userID, err := h.service.Authenticate(body.Login, body.PassHash)
+	userID, err := h.userService.Authenticate(body.Login, body.PassHash)
 
 	if err != nil {
 		c.AbortWithStatus(http.StatusUnauthorized)
@@ -61,4 +66,80 @@ func (h *handler) Authenticate(c *gin.Context) {
 
 	c.Set(cookie.GetUserKey(), *userID)
 	c.Status(http.StatusOK)
+}
+
+func (h *handler) CreateOrder(c *gin.Context) {
+	var orderID string
+	fmt.Println("!@#")
+	err := c.BindPlain(&orderID)
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	fmt.Println(orderID)
+	if validateOrder(orderID) != nil {
+		c.AbortWithStatus(http.StatusUnprocessableEntity)
+		return
+	}
+
+	userID := getUserID(c)
+	intOrderID, err := strconv.Atoi(orderID)
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+	}
+	err = h.orderService.CreateOrder(intOrderID, userID)
+	if err != nil {
+		if errors.Is(err, service.ErrOrderExists) {
+			c.Status(http.StatusOK)
+			return
+		}
+		if errors.Is(err, service.ErrOrderCreatedAnotherUser) {
+			c.AbortWithStatus(http.StatusConflict)
+		}
+		c.AbortWithStatus(http.StatusInternalServerError)
+	}
+	c.Status(http.StatusAccepted)
+}
+
+func validateOrder(orderID string) error {
+	if !isDigitsOnly(orderID) {
+		return fmt.Errorf("order number contains more than just numbers: %s", orderID)
+	}
+	if !validateLuhn(orderID) {
+		return fmt.Errorf("order number is not valid: %s", orderID)
+	}
+	return nil
+}
+
+func isDigitsOnly(s string) bool {
+	for _, r := range s {
+		if !unicode.IsDigit(r) {
+			return false
+		}
+	}
+	return len(s) > 0
+}
+
+func validateLuhn(number string) bool {
+	sum := 0
+	alternating := false
+	for i := len(number) - 1; i >= 0; i-- {
+		digit := int(number[i] - '0')
+
+		if alternating {
+			digit *= 2
+			if digit > 9 {
+				digit -= 9
+			}
+		}
+
+		sum += digit
+		alternating = !alternating
+	}
+
+	return sum%10 == 0
+}
+
+func getUserID(c *gin.Context) string {
+	return c.GetString(cookie.GetUserKey())
 }
