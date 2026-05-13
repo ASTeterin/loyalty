@@ -10,10 +10,12 @@ import (
 var (
 	ErrOrderExists             = errors.New("order already exists")
 	ErrOrderCreatedAnotherUser = errors.New("order created by another user")
+	ErrOrdersNotFound          = errors.New("orders not found user")
 )
 
 type OrderService interface {
 	CreateOrder(orderID int, userID string) error
+	ListOrders(userID string) ([]model.Order, error)
 }
 
 type orderService struct {
@@ -49,4 +51,15 @@ func (s *orderService) CreateOrder(orderID int, userID string) error {
 		return ErrOrderExists
 	}
 	return ErrOrderCreatedAnotherUser
+}
+
+func (s *orderService) ListOrders(userID string) ([]model.Order, error) {
+	orders, err := s.repo.ListOrders(userID)
+	if err != nil {
+		return nil, err
+	}
+	if len(orders) == 0 {
+		return nil, ErrOrdersNotFound
+	}
+	return orders, nil
 }

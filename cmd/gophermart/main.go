@@ -47,6 +47,9 @@ func main() {
 	r.POST("/api/user/orders", func(c *gin.Context) {
 		h.CreateOrder(c)
 	})
+	r.GET("/api/user/orders", func(c *gin.Context) {
+		h.ListOrders(c)
+	})
 	if err := r.Run(config.AppAddr); err != nil {
 		log.Fatalf("failed to run server: %v", err)
 	}

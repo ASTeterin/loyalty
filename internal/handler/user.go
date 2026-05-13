@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/ASTeterin/loyalty/internal/cookie"
@@ -8,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
+	"time"
 	"unicode"
 )
 
@@ -21,10 +23,18 @@ type User struct {
 	PassHash string `json:"password" binding:"required"`
 }
 
+type Order struct {
+	Number     int    `json:"number"`
+	Status     string `json:"status"`
+	Accrual    int    `json:"accrual"`
+	UploadedAt string `json:"uploaded_at"`
+}
+
 type Handler interface {
 	Register(c *gin.Context)
 	Authenticate(c *gin.Context)
 	CreateOrder(c *gin.Context)
+	ListOrders(c *gin.Context)
 }
 
 func NewHandler(userService service.UserService, orderService service.OrderService) Handler {
@@ -70,13 +80,11 @@ func (h *handler) Authenticate(c *gin.Context) {
 
 func (h *handler) CreateOrder(c *gin.Context) {
 	var orderID string
-	fmt.Println("!@#")
 	err := c.BindPlain(&orderID)
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	fmt.Println(orderID)
 	if validateOrder(orderID) != nil {
 		c.AbortWithStatus(http.StatusUnprocessableEntity)
 		return
@@ -99,6 +107,34 @@ func (h *handler) CreateOrder(c *gin.Context) {
 		c.AbortWithStatus(http.StatusInternalServerError)
 	}
 	c.Status(http.StatusAccepted)
+}
+
+func (h *handler) ListOrders(c *gin.Context) {
+	userID := getUserID(c)
+	orders, err := h.orderService.ListOrders(userID)
+	if err != nil {
+		if errors.Is(err, service.ErrOrdersNotFound) {
+			c.Status(http.StatusNoContent)
+			return
+		}
+		c.AbortWithStatus(http.StatusInternalServerError)
+	}
+
+	responseData := make([]Order, 0, len(orders))
+	for _, order := range orders {
+		responseData = append(responseData, Order{
+			Number:     order.ID,
+			Status:     order.Status,
+			UploadedAt: order.CreatedAt.Format(time.RFC3339),
+		})
+	}
+
+	response, err := json.Marshal(responseData)
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+	c.Data(http.StatusOK, "application/json", response)
 }
 
 func validateOrder(orderID string) error {

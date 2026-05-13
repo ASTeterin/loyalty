@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"github.com/ASTeterin/loyalty/internal/model"
 )
 
@@ -41,4 +42,29 @@ func (repo *orderRepo) GetByOrderID(orderID int) (*model.Order, error) {
 	}
 
 	return &order, err
+}
+
+func (repo *orderRepo) ListOrders(userID string) ([]model.Order, error) {
+	ctx := context.TODO()
+	query := `SELECT id, user_id, status, created_at FROM orders WHERE user_id = $1 ORDER BY created_at DESC`
+	urls := make([]model.Order, 0)
+	rows, err := repo.db.QueryContext(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("query error: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var order model.Order
+		err = rows.Scan(&order.ID, &order.UserID, &order.Status, &order.CreatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("scan error: %w", err)
+		}
+		urls = append(urls, order)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return urls, nil
 }

@@ -20,4 +20,5 @@ type Order struct {
 type OrderRepository interface {
 	Store(order Order) error
 	GetByOrderID(orderID int) (*Order, error)
+	ListOrders(userID string) ([]Order, error)
 }
