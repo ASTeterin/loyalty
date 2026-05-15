@@ -14,8 +14,9 @@ import (
 )
 
 type handler struct {
-	userService  service.UserService
-	orderService service.OrderService
+	userService    service.UserService
+	orderService   service.OrderService
+	accrualService service.AccrualService
 }
 
 type User struct {
@@ -37,10 +38,11 @@ type Handler interface {
 	ListOrders(c *gin.Context)
 }
 
-func NewHandler(userService service.UserService, orderService service.OrderService) Handler {
+func NewHandler(userService service.UserService, orderService service.OrderService, accrualService service.AccrualService) Handler {
 	return &handler{
-		userService:  userService,
-		orderService: orderService,
+		userService:    userService,
+		orderService:   orderService,
+		accrualService: accrualService,
 	}
 }
 
@@ -60,8 +62,7 @@ func (h *handler) Register(c *gin.Context) {
 	}
 
 	c.Set(cookie.GetUserKey(), *userID)
-	c.Header("Content-Type", "application/json")
-	c.Data(http.StatusOK, "text/plain", []byte(*userID))
+	c.Status(http.StatusOK)
 }
 
 func (h *handler) Authenticate(c *gin.Context) {
@@ -79,6 +80,7 @@ func (h *handler) Authenticate(c *gin.Context) {
 }
 
 func (h *handler) CreateOrder(c *gin.Context) {
+	fmt.Println("CRE!!!!!!!!!!!!")
 	var orderID string
 	err := c.BindPlain(&orderID)
 	if err != nil {
@@ -89,12 +91,21 @@ func (h *handler) CreateOrder(c *gin.Context) {
 		c.AbortWithStatus(http.StatusUnprocessableEntity)
 		return
 	}
-
-	userID := getUserID(c)
 	intOrderID, err := strconv.Atoi(orderID)
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 	}
+
+	go func() {
+		err2 := h.accrualService.ProcessOrder(intOrderID)
+		if err2 != nil {
+			// TODO: add logging
+			fmt.Println("accrual points err:", err2)
+		}
+	}()
+
+	userID := getUserID(c)
+
 	err = h.orderService.CreateOrder(intOrderID, userID)
 	if err != nil {
 		if errors.Is(err, service.ErrOrderExists) {
@@ -106,6 +117,12 @@ func (h *handler) CreateOrder(c *gin.Context) {
 		}
 		c.AbortWithStatus(http.StatusInternalServerError)
 	}
+	//err2 := h.accrualService.ProcessOrder(intOrderID)
+	//if err2 != nil {
+	//	// TODO: add logging
+	//	fmt.Println("accrual points err:", err2)
+	//}
+
 	c.Status(http.StatusAccepted)
 }
 
@@ -124,7 +141,7 @@ func (h *handler) ListOrders(c *gin.Context) {
 	for _, order := range orders {
 		responseData = append(responseData, Order{
 			Number:     order.ID,
-			Status:     order.Status,
+			Status:     string(order.Status),
 			UploadedAt: order.CreatedAt.Format(time.RFC3339),
 		})
 	}

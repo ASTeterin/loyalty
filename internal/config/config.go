@@ -6,9 +6,10 @@ import (
 )
 
 type Config struct {
-	AppAddr    string
-	DBConnStr  string
-	SigningKey string
+	AppAddr        string
+	DBConnStr      string
+	SigningKey     string
+	AccrualSrvAddr string
 }
 
 const (
@@ -34,8 +35,9 @@ func ParseFlags() Config {
 	}
 
 	return Config{
-		AppAddr:    appAddr,
-		DBConnStr:  dbConnectionString,
-		SigningKey: signingKey,
+		AppAddr:        appAddr,
+		DBConnStr:      dbConnectionString,
+		SigningKey:     signingKey,
+		AccrualSrvAddr: "http://localhost:8081",
 	}
 }

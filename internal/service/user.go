@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/ASTeterin/loyalty/internal/model"
@@ -29,6 +30,8 @@ type userService struct {
 
 func (s *userService) Register(login, password string) (*string, error) {
 	_, err := s.repo.GetByLogin(login)
+	fmt.Println(login)
+	fmt.Println(err)
 	if err != nil {
 		if errors.Is(err, model.ErrUserNotFound) {
 			hash, err2 := hashPassword(password)

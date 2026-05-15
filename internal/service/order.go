@@ -40,7 +40,7 @@ func (s *orderService) CreateOrder(orderID int, userID string) error {
 			order := model.Order{
 				ID:        orderID,
 				UserID:    userUuid,
-				Status:    "",
+				Status:    model.OrderStatusNew,
 				CreatedAt: time.Now(),
 			}
 			return s.repo.Store(order)

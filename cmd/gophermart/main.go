@@ -32,8 +32,9 @@ func main() {
 	userService := service.NewUserService(repo)
 	orderRepo := db.NewOrderRepository(dbConn)
 	orderService := service.NewOrderService(orderRepo)
+	accrualService := service.NewAccrualService(orderRepo, config.AccrualSrvAddr)
 
-	h := handler.NewHandler(userService, orderService)
+	h := handler.NewHandler(userService, orderService, accrualService)
 
 	r := gin.Default()
 	r.Use(cookie.CookieHandler(config.SigningKey))
