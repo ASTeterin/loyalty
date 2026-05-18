@@ -55,6 +55,9 @@ func main() {
 	r.GET("/api/user/balance", func(c *gin.Context) {
 		h.GetUserBalance(c)
 	})
+	r.POST("/api/user/balance/withdraw", func(c *gin.Context) {
+		h.Withdraw(c)
+	})
 	if err := r.Run(config.AppAddr); err != nil {
 		log.Fatalf("failed to run server: %v", err)
 	}

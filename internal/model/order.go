@@ -20,7 +20,7 @@ const (
 )
 
 type Order struct {
-	ID        int         `json:"id" db:"id"`
+	ID        string      `json:"id" db:"id"`
 	UserID    uuid.UUID   `json:"user_id" db:"user_id"`
 	Status    OrderStatus `json:"status" db:"status"`
 	CreatedAt time.Time   `json:"created_at" db:"created_at"`
@@ -28,6 +28,6 @@ type Order struct {
 
 type OrderRepository interface {
 	Store(order Order) error
-	GetByOrderID(orderID int) (*Order, error)
+	GetByOrderID(orderID string) (*Order, error)
 	ListOrders(userID string) ([]Order, error)
 }

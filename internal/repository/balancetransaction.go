@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/ASTeterin/loyalty/internal/model"
@@ -57,4 +58,18 @@ func (repo *balanceTransactionRepo) ListUserTransactions(userID string) ([]model
 		return nil, err
 	}
 	return transactions, nil
+}
+
+func (repo *balanceTransactionRepo) GetByOrderID(orderID string) (*model.BalanceTransaction, error) {
+	ctx := context.TODO()
+	query := `SELECT order_id, user_id, points, created_at FROM balance_transaction WHERE order_id = $1`
+
+	t := model.BalanceTransaction{}
+	err := repo.db.QueryRowContext(ctx, query, orderID).Scan(
+		&t.OrderID, &t.UserID, &t.Points, &t.CreatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, model.ErrBalanceTransactionNotFound
+	}
+
+	return &t, err
 }

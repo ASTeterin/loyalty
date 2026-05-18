@@ -34,17 +34,17 @@ func (repo *orderRepo) Store(order model.Order) error {
 	return err
 }
 
-func (repo *orderRepo) GetByOrderID(orderID int) (*model.Order, error) {
+func (repo *orderRepo) GetByOrderID(orderID string) (*model.Order, error) {
 	ctx := context.TODO()
 	query := `SELECT id, user_id, status, created_at FROM orders WHERE id = $1`
 	order := model.Order{}
-	var strOrder string
+	var status string
 	err := repo.db.QueryRowContext(ctx, query, orderID).Scan(
-		&order.ID, &order.UserID, &strOrder, &order.CreatedAt)
+		&order.ID, &order.UserID, &status, &order.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, model.ErrOrderNotFound
 	}
-	order.Status = model.OrderStatus(strOrder)
+	order.Status = model.OrderStatus(status)
 
 	return &order, err
 }

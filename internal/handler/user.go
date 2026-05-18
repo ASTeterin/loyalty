@@ -8,7 +8,6 @@ import (
 	"github.com/ASTeterin/loyalty/internal/service"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"strconv"
 	"time"
 	"unicode"
 )
@@ -25,15 +24,20 @@ type User struct {
 }
 
 type Order struct {
-	Number     int    `json:"number"`
-	Status     string `json:"status"`
-	Accrual    int    `json:"accrual"`
-	UploadedAt string `json:"uploaded_at"`
+	Number     string  `json:"number"`
+	Status     string  `json:"status"`
+	Accrual    float64 `json:"accrual"`
+	UploadedAt string  `json:"uploaded_at"`
 }
 
 type UserBalance struct {
 	Current   float64 `json:"current"`
 	Withdrawn float64 `json:"withdrawn"`
+}
+
+type WithdrawRequest struct {
+	Order  string  `json:"order" binding:"required"`
+	Points float64 `json:"sum" binding:"required"`
 }
 
 type Handler interface {
@@ -42,6 +46,7 @@ type Handler interface {
 	CreateOrder(c *gin.Context)
 	ListOrders(c *gin.Context)
 	GetUserBalance(c *gin.Context)
+	Withdraw(c *gin.Context)
 }
 
 func NewHandler(userService service.UserService, orderService service.OrderService, accrualService service.AccrualService) Handler {
@@ -97,21 +102,17 @@ func (h *handler) CreateOrder(c *gin.Context) {
 		c.AbortWithStatus(http.StatusUnprocessableEntity)
 		return
 	}
-	intOrderID, err := strconv.Atoi(orderID)
-	if err != nil {
-		c.AbortWithStatus(http.StatusBadRequest)
-	}
 
 	userID := getUserID(c)
 	go func() {
-		err2 := h.accrualService.ProcessOrder(intOrderID, userID)
+		err2 := h.accrualService.ProcessOrder(orderID, userID)
 		if err2 != nil {
 			// TODO: add logging
 			fmt.Println("accrual points err:", err2)
 		}
 	}()
 
-	err = h.orderService.CreateOrder(intOrderID, userID)
+	err = h.orderService.CreateOrder(orderID, userID)
 	if err != nil {
 		if errors.Is(err, service.ErrOrderExists) {
 			c.Status(http.StatusOK)
@@ -170,6 +171,33 @@ func (h *handler) GetUserBalance(c *gin.Context) {
 		return
 	}
 	c.Data(http.StatusOK, "application/json", response)
+}
+
+func (h *handler) Withdraw(c *gin.Context) {
+	userID := getUserID(c)
+
+	body := WithdrawRequest{}
+	err := c.ShouldBindBodyWithJSON(&body)
+	fmt.Println("&&&&&&&&&", body.Points)
+	fmt.Println("&&&&&&&&&", body.Order)
+
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	if validateOrder(body.Order) != nil {
+		c.AbortWithStatus(http.StatusUnprocessableEntity)
+		return
+	}
+
+	err = h.orderService.Withdraw(body.Order, userID, body.Points)
+	if err != nil {
+		if errors.Is(err, service.ErrNotEnoughPoints) {
+			c.AbortWithStatus(402)
+			return
+		}
+		c.AbortWithStatus(http.StatusInternalServerError)
+	}
 }
 
 func validateOrder(orderID string) error {

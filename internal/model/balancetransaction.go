@@ -1,18 +1,22 @@
 package model
 
 import (
+	"errors"
 	"github.com/gofrs/uuid"
 	"time"
 )
 
+var ErrBalanceTransactionNotFound = errors.New("balance transaction not found")
+
 type BalanceTransaction struct {
-	OrderID   int       `json:"status" db:"order_id"`
+	OrderID   string    `json:"order_id" db:"order_id"`
 	UserID    uuid.UUID `json:"user_id" db:"user_id"`
 	Points    float64   `json:"points" db:"points"`
-	CreatedAt time.Time `json:"created_ar" db:"created_at"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 
 type BalanceTransactionRepository interface {
 	ListUserTransactions(userID string) ([]BalanceTransaction, error)
 	Store(t BalanceTransaction) error
+	GetByOrderID(orderID string) (*BalanceTransaction, error)
 }

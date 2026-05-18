@@ -24,7 +24,7 @@ type OrderResponse struct {
 }
 
 type AccrualService interface {
-	ProcessOrder(orderID int, userID string) error
+	ProcessOrder(orderID string, userID string) error
 }
 
 type accrualService struct {
@@ -45,7 +45,7 @@ func NewAccrualService(repo model.OrderRepository, baseURL string, balanceRepo m
 	}
 }
 
-func (a *accrualService) ProcessOrder(orderID int, userID string) error {
+func (a *accrualService) ProcessOrder(orderID string, userID string) error {
 	results := make(chan *OrderResponse, 10)
 	errors := make(chan error, 10)
 
@@ -76,8 +76,8 @@ func (a *accrualService) ProcessOrder(orderID int, userID string) error {
 	}
 }
 
-func (a *accrualService) getAccrualPoints(orderNumber int) (*OrderResponse, error) {
-	url := fmt.Sprintf("%s/api/orders/%d", a.baseURL, orderNumber)
+func (a *accrualService) getAccrualPoints(orderNumber string) (*OrderResponse, error) {
+	url := fmt.Sprintf("%s/api/orders/%s", a.baseURL, orderNumber)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -109,7 +109,7 @@ func (a *accrualService) getAccrualPoints(orderNumber int) (*OrderResponse, erro
 	return &order, nil
 }
 
-func (a *accrualService) startOrderPolling(orderID int, interval, duration time.Duration, results chan<- *OrderResponse, errors chan<- error) {
+func (a *accrualService) startOrderPolling(orderID string, interval, duration time.Duration, results chan<- *OrderResponse, errors chan<- error) {
 	defer close(results)
 	defer close(errors)
 
@@ -133,7 +133,7 @@ func (a *accrualService) startOrderPolling(orderID int, interval, duration time.
 	}
 }
 
-func (a *accrualService) applyOrderStatus(orderID int, orderStatus string) error {
+func (a *accrualService) applyOrderStatus(orderID string, orderStatus string) error {
 	orderData, err := a.orderRepo.GetByOrderID(orderID)
 	if err != nil {
 		return err
@@ -148,7 +148,7 @@ func (a *accrualService) applyOrderStatus(orderID int, orderStatus string) error
 	return a.orderRepo.Store(*orderData)
 }
 
-func (a *accrualService) applyBalanceTransaction(orderID int, accrual float64, userID string) error {
+func (a *accrualService) applyBalanceTransaction(orderID string, accrual float64, userID string) error {
 	userUid, err := uuid.FromString(userID)
 	if err != nil {
 		return err

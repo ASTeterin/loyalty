@@ -13,12 +13,14 @@ var (
 	ErrOrderExists             = errors.New("order already exists")
 	ErrOrderCreatedAnotherUser = errors.New("order created by another user")
 	ErrOrdersNotFound          = errors.New("orders not found user")
+	ErrNotEnoughPoints         = errors.New("not enough points for withdraw")
 )
 
 type OrderService interface {
-	CreateOrder(orderID int, userID string) error
+	CreateOrder(orderID string, userID string) error
 	ListOrders(userID string) ([]model.Order, error)
 	UserBalance(userID string) (UserBalance, error)
+	Withdraw(orderID string, userID string, points float64) error
 }
 
 type orderService struct {
@@ -38,7 +40,7 @@ func NewOrderService(repo model.OrderRepository, balanceTransactionsRepo model.B
 	}
 }
 
-func (s *orderService) CreateOrder(orderID int, userID string) error {
+func (s *orderService) CreateOrder(orderID string, userID string) error {
 	userUuid, err := uuid.FromString(userID)
 	if err != nil {
 		return err
@@ -92,4 +94,51 @@ func (s *orderService) UserBalance(userID string) (UserBalance, error) {
 	}
 
 	return balance, nil
+}
+
+func (s *orderService) Withdraw(orderID string, userID string, points float64) error {
+	fmt.Println("&##", points)
+	err := s.checkBalance(userID, points)
+	if err != nil {
+		return err
+	}
+
+	userUuid, err := uuid.FromString(userID)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.balanceTransactionsRepo.GetByOrderID(orderID)
+	fmt.Println("err", err)
+	if err != nil {
+		if errors.Is(err, model.ErrBalanceTransactionNotFound) {
+			t := model.BalanceTransaction{
+				OrderID:   orderID,
+				UserID:    userUuid,
+				Points:    -points,
+				CreatedAt: time.Now(),
+			}
+			return s.balanceTransactionsRepo.Store(t)
+		}
+		return err
+	}
+
+	return nil
+}
+
+func (s *orderService) checkBalance(userID string, withdrawPoints float64) error {
+	transactions, err := s.balanceTransactionsRepo.ListUserTransactions(userID)
+	if err != nil {
+		return err
+	}
+	balance := 0.0
+	for _, transaction := range transactions {
+		balance += transaction.Points
+	}
+	fmt.Println(withdrawPoints)
+	fmt.Println(balance)
+	if balance < withdrawPoints {
+		return ErrNotEnoughPoints
+	}
+	return nil
 }
