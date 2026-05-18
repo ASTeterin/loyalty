@@ -61,12 +61,12 @@ func (repo *orderRepo) ListOrders(userID string) ([]model.Order, error) {
 
 	for rows.Next() {
 		var order model.Order
-		var strOrder string
-		err = rows.Scan(&order.ID, &order.UserID, &strOrder, &order.CreatedAt)
+		var status string
+		err = rows.Scan(&order.ID, &order.UserID, &status, &order.CreatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("scan error: %w", err)
 		}
-		order.Status = model.OrderStatus(strOrder)
+		order.Status = model.OrderStatus(status)
 		urls = append(urls, order)
 	}
 

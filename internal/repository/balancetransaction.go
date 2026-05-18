@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
 	"github.com/ASTeterin/loyalty/internal/model"
 )
 
@@ -19,12 +20,14 @@ func NewBalanceTransactionRepository(db *sql.DB) model.BalanceTransactionReposit
 }
 
 func (repo *balanceTransactionRepo) Store(t model.BalanceTransaction) error {
-	fmt.Println("store", t)
 	ctx := context.TODO()
 	const query = `
         INSERT INTO balance_transaction (order_id, user_id, points)
         VALUES ($1, $2, $3)
-		ON CONFLICT (id) DO NOTHING
+		ON CONFLICT (order_id) DO 
+        UPDATE SET
+    		points = EXCLUDED.points
+        	
     `
 
 	_, err := repo.db.ExecContext(ctx, query, t.OrderID, t.UserID.String(), t.Points)
@@ -33,8 +36,8 @@ func (repo *balanceTransactionRepo) Store(t model.BalanceTransaction) error {
 
 func (repo *balanceTransactionRepo) ListUserTransactions(userID string) ([]model.BalanceTransaction, error) {
 	ctx := context.TODO()
-	query := `SELECT id, order_id, user_id, points, created_at FROM balance_transaction WHERE user_id = $1`
-	transactions := make([]model.BalanceTransaction, 0)
+	query := `SELECT order_id, user_id, points, created_at FROM balance_transaction WHERE user_id = $1`
+	transactions := []model.BalanceTransaction{}
 	rows, err := repo.db.QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("query error: %w", err)
@@ -43,7 +46,7 @@ func (repo *balanceTransactionRepo) ListUserTransactions(userID string) ([]model
 
 	for rows.Next() {
 		var t model.BalanceTransaction
-		err = rows.Scan(&t.ID, t.OrderID, &t.UserID, &t.Points, &t.CreatedAt)
+		err = rows.Scan(&t.OrderID, &t.UserID, &t.Points, &t.CreatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("scan error: %w", err)
 		}

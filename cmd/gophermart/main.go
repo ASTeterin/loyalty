@@ -53,7 +53,7 @@ func main() {
 		h.ListOrders(c)
 	})
 	r.GET("/api/user/balance", func(c *gin.Context) {
-		h.ListOrders(c)
+		h.GetUserBalance(c)
 	})
 	if err := r.Run(config.AppAddr); err != nil {
 		log.Fatalf("failed to run server: %v", err)

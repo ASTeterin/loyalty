@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"github.com/ASTeterin/loyalty/internal/model"
 	"github.com/gofrs/uuid"
 	"math"
@@ -75,6 +76,7 @@ func (s *orderService) ListOrders(userID string) ([]model.Order, error) {
 
 func (s *orderService) UserBalance(userID string) (UserBalance, error) {
 	transactions, err := s.balanceTransactionsRepo.ListUserTransactions(userID)
+	fmt.Println("@@@@@@@@@@@@", transactions)
 	if err != nil {
 		return UserBalance{}, err
 	}

@@ -41,6 +41,7 @@ type Handler interface {
 	Authenticate(c *gin.Context)
 	CreateOrder(c *gin.Context)
 	ListOrders(c *gin.Context)
+	GetUserBalance(c *gin.Context)
 }
 
 func NewHandler(userService service.UserService, orderService service.OrderService, accrualService service.AccrualService) Handler {
