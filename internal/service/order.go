@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/ASTeterin/loyalty/internal/model"
 	"github.com/gofrs/uuid"
+	"math"
 	"time"
 )
 
@@ -16,15 +17,23 @@ var (
 type OrderService interface {
 	CreateOrder(orderID int, userID string) error
 	ListOrders(userID string) ([]model.Order, error)
+	UserBalance(userID string) (UserBalance, error)
 }
 
 type orderService struct {
-	repo model.OrderRepository
+	orderRepository         model.OrderRepository
+	balanceTransactionsRepo model.BalanceTransactionRepository
 }
 
-func NewOrderService(repo model.OrderRepository) OrderService {
+type UserBalance struct {
+	Balance   float64
+	Withdrawn float64
+}
+
+func NewOrderService(repo model.OrderRepository, balanceTransactionsRepo model.BalanceTransactionRepository) OrderService {
 	return &orderService{
-		repo: repo,
+		orderRepository:         repo,
+		balanceTransactionsRepo: balanceTransactionsRepo,
 	}
 }
 
@@ -34,7 +43,7 @@ func (s *orderService) CreateOrder(orderID int, userID string) error {
 		return err
 	}
 
-	existingOrder, err := s.repo.GetByOrderID(orderID)
+	existingOrder, err := s.orderRepository.GetByOrderID(orderID)
 	if err != nil {
 		if errors.Is(err, model.ErrOrderNotFound) {
 			order := model.Order{
@@ -43,7 +52,7 @@ func (s *orderService) CreateOrder(orderID int, userID string) error {
 				Status:    model.OrderStatusNew,
 				CreatedAt: time.Now(),
 			}
-			return s.repo.Store(order)
+			return s.orderRepository.Store(order)
 		}
 		return err
 	}
@@ -54,7 +63,7 @@ func (s *orderService) CreateOrder(orderID int, userID string) error {
 }
 
 func (s *orderService) ListOrders(userID string) ([]model.Order, error) {
-	orders, err := s.repo.ListOrders(userID)
+	orders, err := s.orderRepository.ListOrders(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -62,4 +71,23 @@ func (s *orderService) ListOrders(userID string) ([]model.Order, error) {
 		return nil, ErrOrdersNotFound
 	}
 	return orders, nil
+}
+
+func (s *orderService) UserBalance(userID string) (UserBalance, error) {
+	transactions, err := s.balanceTransactionsRepo.ListUserTransactions(userID)
+	if err != nil {
+		return UserBalance{}, err
+	}
+	balance := UserBalance{
+		Balance:   0,
+		Withdrawn: 0,
+	}
+	for _, transaction := range transactions {
+		balance.Balance += transaction.Points
+		if transaction.Points < 0 {
+			balance.Withdrawn += math.Abs(transaction.Points)
+		}
+	}
+
+	return balance, nil
 }

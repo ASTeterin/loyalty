@@ -23,7 +23,7 @@ type Order struct {
 	ID        int         `json:"id" db:"id"`
 	UserID    uuid.UUID   `json:"user_id" db:"user_id"`
 	Status    OrderStatus `json:"status" db:"status"`
-	CreatedAt time.Time   `json:"pass" db:"created_at"`
+	CreatedAt time.Time   `json:"created_at" db:"created_at"`
 }
 
 type OrderRepository interface {

@@ -31,6 +31,11 @@ type Order struct {
 	UploadedAt string `json:"uploaded_at"`
 }
 
+type UserBalance struct {
+	Current   float64 `json:"current"`
+	Withdrawn float64 `json:"withdrawn"`
+}
+
 type Handler interface {
 	Register(c *gin.Context)
 	Authenticate(c *gin.Context)
@@ -96,15 +101,14 @@ func (h *handler) CreateOrder(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 	}
 
+	userID := getUserID(c)
 	go func() {
-		err2 := h.accrualService.ProcessOrder(intOrderID)
+		err2 := h.accrualService.ProcessOrder(intOrderID, userID)
 		if err2 != nil {
 			// TODO: add logging
 			fmt.Println("accrual points err:", err2)
 		}
 	}()
-
-	userID := getUserID(c)
 
 	err = h.orderService.CreateOrder(intOrderID, userID)
 	if err != nil {
@@ -117,11 +121,6 @@ func (h *handler) CreateOrder(c *gin.Context) {
 		}
 		c.AbortWithStatus(http.StatusInternalServerError)
 	}
-	//err2 := h.accrualService.ProcessOrder(intOrderID)
-	//if err2 != nil {
-	//	// TODO: add logging
-	//	fmt.Println("accrual points err:", err2)
-	//}
 
 	c.Status(http.StatusAccepted)
 }
@@ -147,6 +146,24 @@ func (h *handler) ListOrders(c *gin.Context) {
 	}
 
 	response, err := json.Marshal(responseData)
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+	c.Data(http.StatusOK, "application/json", response)
+}
+
+func (h *handler) GetUserBalance(c *gin.Context) {
+	userID := getUserID(c)
+	balance, err := h.orderService.UserBalance(userID)
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+	}
+
+	response, err := json.Marshal(UserBalance{
+		Current:   balance.Balance,
+		Withdrawn: balance.Withdrawn,
+	})
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return

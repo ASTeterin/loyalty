@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ASTeterin/loyalty/internal/model"
+	"github.com/gofrs/uuid"
 	"io"
 	"net/http"
-	"strconv"
 	"time"
 )
 
@@ -18,32 +18,34 @@ const (
 )
 
 type OrderResponse struct {
-	Order   string `json:"order"`
-	Status  string `json:"status"`
-	Accrual int    `json:"accrual"`
+	Order   string  `json:"order"`
+	Status  string  `json:"status"`
+	Accrual float64 `json:"accrual"`
 }
 
 type AccrualService interface {
-	ProcessOrder(orderID int) error
+	ProcessOrder(orderID int, userID string) error
 }
 
 type accrualService struct {
-	baseURL    string
-	repo       model.OrderRepository
-	httpClient *http.Client
+	baseURL     string
+	orderRepo   model.OrderRepository
+	balanceRepo model.BalanceTransactionRepository
+	httpClient  *http.Client
 }
 
-func NewAccrualService(repo model.OrderRepository, baseURL string) AccrualService {
+func NewAccrualService(repo model.OrderRepository, baseURL string, balanceRepo model.BalanceTransactionRepository) AccrualService {
 	return &accrualService{
-		baseURL: baseURL,
-		repo:    repo,
+		baseURL:     baseURL,
+		orderRepo:   repo,
+		balanceRepo: balanceRepo,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
 	}
 }
 
-func (a *accrualService) ProcessOrder(orderID int) error {
+func (a *accrualService) ProcessOrder(orderID int, userID string) error {
 	results := make(chan *OrderResponse, 10)
 	errors := make(chan error, 10)
 
@@ -57,7 +59,11 @@ func (a *accrualService) ProcessOrder(orderID int) error {
 			}
 			fmt.Printf("Получен заказ: %s, Статус: %s, Начисление: %d\n",
 				order.Order, order.Status, order.Accrual)
-			err := a.applyOrderStatus(*order)
+			err := a.applyOrderStatus(orderID, order.Status)
+			if err != nil {
+				errors <- err
+			}
+			err = a.applyBalanceTransaction(orderID, order.Accrual, userID)
 			if err != nil {
 				errors <- err
 			}
@@ -127,25 +133,33 @@ func (a *accrualService) startOrderPolling(orderID int, interval, duration time.
 	}
 }
 
-func (a *accrualService) applyOrderStatus(order OrderResponse) error {
-	fmt.Println(order)
-	orderID, err := strconv.Atoi(order.Order)
-	if err != nil {
-		return err
-	}
-	orderData, err := a.repo.GetByOrderID(orderID)
+func (a *accrualService) applyOrderStatus(orderID int, orderStatus string) error {
+	orderData, err := a.orderRepo.GetByOrderID(orderID)
 	if err != nil {
 		return err
 	}
 
-	status, err := convertOrderStatus(order.Status)
+	status, err := convertOrderStatus(orderStatus)
 	fmt.Println("stat", status)
 	if err != nil {
 		return err
 	}
 	orderData.Status = status
+	return a.orderRepo.Store(*orderData)
+}
 
-	return a.repo.Store(*orderData)
+func (a *accrualService) applyBalanceTransaction(orderID int, accrual float64, userID string) error {
+	userUid, err := uuid.FromString(userID)
+	if err != nil {
+		return err
+	}
+
+	balanceTransaction := model.BalanceTransaction{
+		OrderID: orderID,
+		UserID:  userUid,
+		Points:  accrual,
+	}
+	return a.balanceRepo.Store(balanceTransaction)
 }
 
 func convertOrderStatus(orderStatus string) (model.OrderStatus, error) {

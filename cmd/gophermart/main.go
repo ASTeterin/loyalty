@@ -31,8 +31,9 @@ func main() {
 	repo := db.NewUserRepository(dbConn)
 	userService := service.NewUserService(repo)
 	orderRepo := db.NewOrderRepository(dbConn)
-	orderService := service.NewOrderService(orderRepo)
-	accrualService := service.NewAccrualService(orderRepo, config.AccrualSrvAddr)
+	balanceTransactionRepo := db.NewBalanceTransactionRepository(dbConn)
+	orderService := service.NewOrderService(orderRepo, balanceTransactionRepo)
+	accrualService := service.NewAccrualService(orderRepo, config.AccrualSrvAddr, balanceTransactionRepo)
 
 	h := handler.NewHandler(userService, orderService, accrualService)
 
@@ -49,6 +50,9 @@ func main() {
 		h.CreateOrder(c)
 	})
 	r.GET("/api/user/orders", func(c *gin.Context) {
+		h.ListOrders(c)
+	})
+	r.GET("/api/user/balance", func(c *gin.Context) {
 		h.ListOrders(c)
 	})
 	if err := r.Run(config.AppAddr); err != nil {
