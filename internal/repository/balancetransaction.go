@@ -28,16 +28,18 @@ func (repo *balanceTransactionRepo) Store(t model.BalanceTransaction) error {
 		ON CONFLICT (order_id) DO 
         UPDATE SET
     		points = EXCLUDED.points
-        	
     `
 
 	_, err := repo.db.ExecContext(ctx, query, t.OrderID, t.UserID.String(), t.Points)
 	return err
 }
 
-func (repo *balanceTransactionRepo) ListUserTransactions(userID string) ([]model.BalanceTransaction, error) {
+func (repo *balanceTransactionRepo) ListUserTransactions(userID string, onlyWithdrawal bool) ([]model.BalanceTransaction, error) {
 	ctx := context.TODO()
 	query := `SELECT order_id, user_id, points, created_at FROM balance_transaction WHERE user_id = $1`
+	if onlyWithdrawal {
+		query += " AND points < 0"
+	}
 	transactions := []model.BalanceTransaction{}
 	rows, err := repo.db.QueryContext(ctx, query, userID)
 	if err != nil {

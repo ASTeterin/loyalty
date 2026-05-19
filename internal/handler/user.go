@@ -40,6 +40,12 @@ type WithdrawRequest struct {
 	Points float64 `json:"sum" binding:"required"`
 }
 
+type Withdrawal struct {
+	Order       string  `json:"order"`
+	Points      float64 `json:"sum"`
+	ProcessedAt string  `json:"processed_at"`
+}
+
 type Handler interface {
 	Register(c *gin.Context)
 	Authenticate(c *gin.Context)
@@ -47,6 +53,7 @@ type Handler interface {
 	ListOrders(c *gin.Context)
 	GetUserBalance(c *gin.Context)
 	Withdraw(c *gin.Context)
+	ListWithdrawals(c *gin.Context)
 }
 
 func NewHandler(userService service.UserService, orderService service.OrderService, accrualService service.AccrualService) Handler {
@@ -91,7 +98,6 @@ func (h *handler) Authenticate(c *gin.Context) {
 }
 
 func (h *handler) CreateOrder(c *gin.Context) {
-	fmt.Println("CRE!!!!!!!!!!!!")
 	var orderID string
 	err := c.BindPlain(&orderID)
 	if err != nil {
@@ -178,8 +184,6 @@ func (h *handler) Withdraw(c *gin.Context) {
 
 	body := WithdrawRequest{}
 	err := c.ShouldBindBodyWithJSON(&body)
-	fmt.Println("&&&&&&&&&", body.Points)
-	fmt.Println("&&&&&&&&&", body.Order)
 
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -198,6 +202,36 @@ func (h *handler) Withdraw(c *gin.Context) {
 		}
 		c.AbortWithStatus(http.StatusInternalServerError)
 	}
+}
+
+func (h *handler) ListWithdrawals(c *gin.Context) {
+	userID := getUserID(c)
+	withdrawals, err := h.orderService.ListWithdrawals(userID)
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	if len(withdrawals) == 0 {
+		c.AbortWithStatus(http.StatusNoContent)
+		return
+	}
+
+	responseData := make([]Withdrawal, 0, len(withdrawals))
+	for _, w := range withdrawals {
+		responseData = append(responseData, Withdrawal{
+			Order:       w.OrderID,
+			Points:      w.Points,
+			ProcessedAt: w.ProcessedAt.Format(time.RFC3339),
+		})
+	}
+
+	response, err := json.Marshal(responseData)
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+	c.Data(http.StatusOK, "application/json", response)
 }
 
 func validateOrder(orderID string) error {

@@ -16,7 +16,7 @@ type BalanceTransaction struct {
 }
 
 type BalanceTransactionRepository interface {
-	ListUserTransactions(userID string) ([]BalanceTransaction, error)
+	ListUserTransactions(userID string, onlyWithdrawal bool) ([]BalanceTransaction, error)
 	Store(t BalanceTransaction) error
 	GetByOrderID(orderID string) (*BalanceTransaction, error)
 }

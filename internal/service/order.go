@@ -21,6 +21,7 @@ type OrderService interface {
 	ListOrders(userID string) ([]model.Order, error)
 	UserBalance(userID string) (UserBalance, error)
 	Withdraw(orderID string, userID string, points float64) error
+	ListWithdrawals(userID string) ([]WithdrawalData, error)
 }
 
 type orderService struct {
@@ -31,6 +32,12 @@ type orderService struct {
 type UserBalance struct {
 	Balance   float64
 	Withdrawn float64
+}
+
+type WithdrawalData struct {
+	OrderID     string
+	Points      float64
+	ProcessedAt time.Time
 }
 
 func NewOrderService(repo model.OrderRepository, balanceTransactionsRepo model.BalanceTransactionRepository) OrderService {
@@ -77,7 +84,7 @@ func (s *orderService) ListOrders(userID string) ([]model.Order, error) {
 }
 
 func (s *orderService) UserBalance(userID string) (UserBalance, error) {
-	transactions, err := s.balanceTransactionsRepo.ListUserTransactions(userID)
+	transactions, err := s.balanceTransactionsRepo.ListUserTransactions(userID, false)
 	fmt.Println("@@@@@@@@@@@@", transactions)
 	if err != nil {
 		return UserBalance{}, err
@@ -97,7 +104,6 @@ func (s *orderService) UserBalance(userID string) (UserBalance, error) {
 }
 
 func (s *orderService) Withdraw(orderID string, userID string, points float64) error {
-	fmt.Println("&##", points)
 	err := s.checkBalance(userID, points)
 	if err != nil {
 		return err
@@ -126,8 +132,24 @@ func (s *orderService) Withdraw(orderID string, userID string, points float64) e
 	return nil
 }
 
+func (s *orderService) ListWithdrawals(userID string) ([]WithdrawalData, error) {
+	transactions, err := s.balanceTransactionsRepo.ListUserTransactions(userID, true)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]WithdrawalData, 0, len(transactions))
+	for _, transaction := range transactions {
+		result = append(result, WithdrawalData{
+			OrderID:     transaction.OrderID,
+			Points:      -transaction.Points,
+			ProcessedAt: transaction.CreatedAt,
+		})
+	}
+	return result, nil
+}
+
 func (s *orderService) checkBalance(userID string, withdrawPoints float64) error {
-	transactions, err := s.balanceTransactionsRepo.ListUserTransactions(userID)
+	transactions, err := s.balanceTransactionsRepo.ListUserTransactions(userID, false)
 	if err != nil {
 		return err
 	}

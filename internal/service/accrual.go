@@ -57,6 +57,8 @@ func (a *accrualService) ProcessOrder(orderID string, userID string) error {
 			if !ok {
 				return nil
 			}
+			fmt.Println("order!!!!!!!!!!!!1", order)
+
 			fmt.Printf("Получен заказ: %s, Статус: %s, Начисление: %d\n",
 				order.Order, order.Status, order.Accrual)
 			err := a.applyOrderStatus(orderID, order.Status)
@@ -140,7 +142,6 @@ func (a *accrualService) applyOrderStatus(orderID string, orderStatus string) er
 	}
 
 	status, err := convertOrderStatus(orderStatus)
-	fmt.Println("stat", status)
 	if err != nil {
 		return err
 	}

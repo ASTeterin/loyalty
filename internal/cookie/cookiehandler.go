@@ -37,7 +37,6 @@ func CookieHandler(signingKey string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if slices.Contains(noAuthRoutes, c.Request.RequestURI) {
 			c.Next()
-			fmt.Println("############3", c.Keys)
 			setCookie(c, signingKey)
 			return
 		}
@@ -52,13 +51,8 @@ func CookieHandler(signingKey string) gin.HandlerFunc {
 				return []byte(signingKey), nil
 			})
 
-			fmt.Println("token", token)
-			fmt.Println(err)
-			fmt.Println("token", token.Valid)
-
 			if err == nil && token.Valid {
 				claims := token.Claims.(*Claims)
-				fmt.Println("UUU", claims.UserID)
 				userID = claims.UserID
 				c.Set(GetUserKey(), userID)
 				c.Next()
