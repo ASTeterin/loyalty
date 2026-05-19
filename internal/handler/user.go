@@ -73,7 +73,6 @@ func (h *handler) Register(c *gin.Context) {
 	userID, err := h.userService.Register(body.Login, body.PassHash)
 
 	if err != nil {
-		fmt.Println(err)
 		if errors.Is(err, service.ErrUserExists) {
 			c.AbortWithStatus(http.StatusConflict)
 			return

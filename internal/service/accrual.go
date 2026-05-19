@@ -57,10 +57,7 @@ func (a *accrualService) ProcessOrder(orderID string, userID string) error {
 			if !ok {
 				return nil
 			}
-			fmt.Println("order!!!!!!!!!!!!1", order)
 
-			fmt.Printf("Получен заказ: %s, Статус: %s, Начисление: %d\n",
-				order.Order, order.Status, order.Accrual)
 			err := a.applyOrderStatus(orderID, order.Status)
 			if err != nil {
 				errors <- err
@@ -73,7 +70,7 @@ func (a *accrualService) ProcessOrder(orderID string, userID string) error {
 			if !ok {
 				continue
 			}
-			fmt.Printf("Ошибка: %v\n", err)
+			fmt.Printf("Error: %v\n", err)
 		}
 	}
 }
@@ -86,14 +83,12 @@ func (a *accrualService) getAccrualPoints(orderNumber string) (*OrderResponse, e
 		return nil, fmt.Errorf("не удалось создать запрос: %w", err)
 	}
 
-	fmt.Println(req)
 	resp, err := a.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка HTTP-запроса: %w", err)
 	}
 	defer resp.Body.Close()
 
-	fmt.Println(resp)
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("неудачный статус ответа: %d", resp.StatusCode)
 	}

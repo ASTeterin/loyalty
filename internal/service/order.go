@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"github.com/ASTeterin/loyalty/internal/model"
 	"github.com/gofrs/uuid"
 	"math"
@@ -85,7 +84,6 @@ func (s *orderService) ListOrders(userID string) ([]model.Order, error) {
 
 func (s *orderService) UserBalance(userID string) (UserBalance, error) {
 	transactions, err := s.balanceTransactionsRepo.ListUserTransactions(userID, false)
-	fmt.Println("@@@@@@@@@@@@", transactions)
 	if err != nil {
 		return UserBalance{}, err
 	}
@@ -115,7 +113,6 @@ func (s *orderService) Withdraw(orderID string, userID string, points float64) e
 	}
 
 	_, err = s.balanceTransactionsRepo.GetByOrderID(orderID)
-	fmt.Println("err", err)
 	if err != nil {
 		if errors.Is(err, model.ErrBalanceTransactionNotFound) {
 			t := model.BalanceTransaction{
@@ -157,8 +154,6 @@ func (s *orderService) checkBalance(userID string, withdrawPoints float64) error
 	for _, transaction := range transactions {
 		balance += transaction.Points
 	}
-	fmt.Println(withdrawPoints)
-	fmt.Println(balance)
 	if balance < withdrawPoints {
 		return ErrNotEnoughPoints
 	}

@@ -28,7 +28,7 @@ func main() {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
 	defer dbConn.Close()
-	//migrateDB(dbConn)
+	migrateDB(dbConn)
 	repo := db.NewUserRepository(dbConn)
 	userService := service.NewUserService(repo)
 	orderRepo := db.NewOrderRepository(dbConn)

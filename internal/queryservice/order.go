@@ -37,7 +37,6 @@ func (repo *orderQueryService) ListOrders(userID string) ([]OrderDTO, error) {
 
 	orders := []OrderDTO{}
 	rows, err := repo.db.QueryContext(ctx, query, userID)
-	fmt.Println("!!!!!", err)
 	if err != nil {
 		return nil, fmt.Errorf("query error: %w", err)
 	}
@@ -55,6 +54,5 @@ func (repo *orderQueryService) ListOrders(userID string) ([]OrderDTO, error) {
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
-	fmt.Println("orders:", orders)
 	return orders, nil
 }

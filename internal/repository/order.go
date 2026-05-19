@@ -20,7 +20,6 @@ func NewOrderRepository(db *sql.DB) model.OrderRepository {
 }
 
 func (repo *orderRepo) Store(order model.Order) error {
-	fmt.Println("store", order)
 	ctx := context.TODO()
 	const query = `
         INSERT INTO orders (id, user_id, status, created_at)
