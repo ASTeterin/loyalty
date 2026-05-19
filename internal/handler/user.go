@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ASTeterin/loyalty/internal/cookie"
+	query "github.com/ASTeterin/loyalty/internal/queryservice"
 	"github.com/ASTeterin/loyalty/internal/service"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -13,9 +14,10 @@ import (
 )
 
 type handler struct {
-	userService    service.UserService
-	orderService   service.OrderService
-	accrualService service.AccrualService
+	userService       service.UserService
+	orderService      service.OrderService
+	accrualService    service.AccrualService
+	orderQueryService query.OrderQueryService
 }
 
 type User struct {
@@ -56,11 +58,12 @@ type Handler interface {
 	ListWithdrawals(c *gin.Context)
 }
 
-func NewHandler(userService service.UserService, orderService service.OrderService, accrualService service.AccrualService) Handler {
+func NewHandler(userService service.UserService, orderService service.OrderService, accrualService service.AccrualService, orderQueryService query.OrderQueryService) Handler {
 	return &handler{
-		userService:    userService,
-		orderService:   orderService,
-		accrualService: accrualService,
+		userService:       userService,
+		orderService:      orderService,
+		accrualService:    accrualService,
+		orderQueryService: orderQueryService,
 	}
 }
 
@@ -135,7 +138,7 @@ func (h *handler) CreateOrder(c *gin.Context) {
 
 func (h *handler) ListOrders(c *gin.Context) {
 	userID := getUserID(c)
-	orders, err := h.orderService.ListOrders(userID)
+	orders, err := h.orderQueryService.ListOrders(userID)
 	if err != nil {
 		if errors.Is(err, service.ErrOrdersNotFound) {
 			c.Status(http.StatusNoContent)
@@ -147,9 +150,10 @@ func (h *handler) ListOrders(c *gin.Context) {
 	responseData := make([]Order, 0, len(orders))
 	for _, order := range orders {
 		responseData = append(responseData, Order{
-			Number:     order.ID,
-			Status:     string(order.Status),
-			UploadedAt: order.CreatedAt.Format(time.RFC3339),
+			Number:     order.Number,
+			Status:     order.Status,
+			Accrual:    order.Accrual,
+			UploadedAt: order.UploadedAt.Format(time.RFC3339),
 		})
 	}
 

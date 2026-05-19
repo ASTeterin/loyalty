@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/ASTeterin/loyalty/internal/cookie"
 	"github.com/ASTeterin/loyalty/internal/handler"
+	query "github.com/ASTeterin/loyalty/internal/queryservice"
 	db "github.com/ASTeterin/loyalty/internal/repository"
 	"github.com/ASTeterin/loyalty/internal/service"
 	"github.com/gin-gonic/gin"
@@ -34,8 +35,9 @@ func main() {
 	balanceTransactionRepo := db.NewBalanceTransactionRepository(dbConn)
 	orderService := service.NewOrderService(orderRepo, balanceTransactionRepo)
 	accrualService := service.NewAccrualService(orderRepo, config.AccrualSrvAddr, balanceTransactionRepo)
+	orderQueryService := query.NewOrderQueryService(dbConn)
 
-	h := handler.NewHandler(userService, orderService, accrualService)
+	h := handler.NewHandler(userService, orderService, accrualService, orderQueryService)
 
 	r := gin.Default()
 	r.Use(cookie.CookieHandler(config.SigningKey))
