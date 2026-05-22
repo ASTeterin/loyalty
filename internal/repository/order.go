@@ -19,8 +19,7 @@ func NewOrderRepository(db *sql.DB) model.OrderRepository {
 	return repo
 }
 
-func (repo *orderRepo) Store(order model.Order) error {
-	ctx := context.TODO()
+func (repo *orderRepo) Store(ctx context.Context, order model.Order) error {
 	const query = `
         INSERT INTO orders (id, user_id, status, created_at)
         VALUES ($1, $2, $3, $4)
@@ -33,8 +32,7 @@ func (repo *orderRepo) Store(order model.Order) error {
 	return err
 }
 
-func (repo *orderRepo) GetByOrderID(orderID string) (*model.Order, error) {
-	ctx := context.TODO()
+func (repo *orderRepo) GetByOrderID(ctx context.Context, orderID string) (*model.Order, error) {
 	query := `SELECT id, user_id, status, created_at FROM orders WHERE id = $1`
 	order := model.Order{}
 	var status string
@@ -48,8 +46,7 @@ func (repo *orderRepo) GetByOrderID(orderID string) (*model.Order, error) {
 	return &order, err
 }
 
-func (repo *orderRepo) ListOrders(userID string) ([]model.Order, error) {
-	ctx := context.TODO()
+func (repo *orderRepo) ListOrders(ctx context.Context, userID string) ([]model.Order, error) {
 	query := `SELECT id, user_id, status, created_at FROM orders WHERE user_id = $1 ORDER BY created_at DESC`
 	urls := make([]model.Order, 0)
 	rows, err := repo.db.QueryContext(ctx, query, userID)

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"github.com/ASTeterin/loyalty/internal/model"
 	"github.com/gofrs/uuid"
@@ -16,11 +17,11 @@ var (
 )
 
 type OrderService interface {
-	CreateOrder(orderID string, userID string) error
-	ListOrders(userID string) ([]model.Order, error)
-	UserBalance(userID string) (UserBalance, error)
-	Withdraw(orderID string, userID string, points float64) error
-	ListWithdrawals(userID string) ([]WithdrawalData, error)
+	CreateOrder(ctx context.Context, orderID string, userID string) error
+	ListOrders(ctx context.Context, userID string) ([]model.Order, error)
+	UserBalance(ctx context.Context, userID string) (UserBalance, error)
+	Withdraw(ctx context.Context, orderID string, userID string, points float64) error
+	ListWithdrawals(ctx context.Context, userID string) ([]WithdrawalData, error)
 }
 
 type orderService struct {
@@ -46,13 +47,13 @@ func NewOrderService(repo model.OrderRepository, balanceTransactionsRepo model.B
 	}
 }
 
-func (s *orderService) CreateOrder(orderID string, userID string) error {
+func (s *orderService) CreateOrder(ctx context.Context, orderID string, userID string) error {
 	userUuid, err := uuid.FromString(userID)
 	if err != nil {
 		return err
 	}
 
-	existingOrder, err := s.orderRepository.GetByOrderID(orderID)
+	existingOrder, err := s.orderRepository.GetByOrderID(ctx, orderID)
 	if err != nil {
 		if errors.Is(err, model.ErrOrderNotFound) {
 			order := model.Order{
@@ -61,7 +62,7 @@ func (s *orderService) CreateOrder(orderID string, userID string) error {
 				Status:    model.OrderStatusNew,
 				CreatedAt: time.Now(),
 			}
-			return s.orderRepository.Store(order)
+			return s.orderRepository.Store(ctx, order)
 		}
 		return err
 	}
@@ -71,8 +72,8 @@ func (s *orderService) CreateOrder(orderID string, userID string) error {
 	return ErrOrderCreatedAnotherUser
 }
 
-func (s *orderService) ListOrders(userID string) ([]model.Order, error) {
-	orders, err := s.orderRepository.ListOrders(userID)
+func (s *orderService) ListOrders(ctx context.Context, userID string) ([]model.Order, error) {
+	orders, err := s.orderRepository.ListOrders(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -82,8 +83,8 @@ func (s *orderService) ListOrders(userID string) ([]model.Order, error) {
 	return orders, nil
 }
 
-func (s *orderService) UserBalance(userID string) (UserBalance, error) {
-	transactions, err := s.balanceTransactionsRepo.ListUserTransactions(userID, false)
+func (s *orderService) UserBalance(ctx context.Context, userID string) (UserBalance, error) {
+	transactions, err := s.balanceTransactionsRepo.ListUserTransactions(ctx, userID, false)
 	if err != nil {
 		return UserBalance{}, err
 	}
@@ -101,8 +102,8 @@ func (s *orderService) UserBalance(userID string) (UserBalance, error) {
 	return balance, nil
 }
 
-func (s *orderService) Withdraw(orderID string, userID string, points float64) error {
-	err := s.checkBalance(userID, points)
+func (s *orderService) Withdraw(ctx context.Context, orderID string, userID string, points float64) error {
+	err := s.checkBalance(ctx, userID, points)
 	if err != nil {
 		return err
 	}
@@ -129,8 +130,8 @@ func (s *orderService) Withdraw(orderID string, userID string, points float64) e
 	return nil
 }
 
-func (s *orderService) ListWithdrawals(userID string) ([]WithdrawalData, error) {
-	transactions, err := s.balanceTransactionsRepo.ListUserTransactions(userID, true)
+func (s *orderService) ListWithdrawals(ctx context.Context, userID string) ([]WithdrawalData, error) {
+	transactions, err := s.balanceTransactionsRepo.ListUserTransactions(ctx, userID, true)
 	if err != nil {
 		return nil, err
 	}
@@ -145,8 +146,8 @@ func (s *orderService) ListWithdrawals(userID string) ([]WithdrawalData, error) 
 	return result, nil
 }
 
-func (s *orderService) checkBalance(userID string, withdrawPoints float64) error {
-	transactions, err := s.balanceTransactionsRepo.ListUserTransactions(userID, false)
+func (s *orderService) checkBalance(ctx context.Context, userID string, withdrawPoints float64) error {
+	transactions, err := s.balanceTransactionsRepo.ListUserTransactions(ctx, userID, false)
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -49,13 +50,13 @@ type Withdrawal struct {
 }
 
 type Handler interface {
-	Register(c *gin.Context)
-	Authenticate(c *gin.Context)
-	CreateOrder(c *gin.Context)
-	ListOrders(c *gin.Context)
-	GetUserBalance(c *gin.Context)
-	Withdraw(c *gin.Context)
-	ListWithdrawals(c *gin.Context)
+	Register(ctx context.Context, c *gin.Context)
+	Authenticate(ctx context.Context, c *gin.Context)
+	CreateOrder(ctx context.Context, c *gin.Context)
+	ListOrders(ctx context.Context, c *gin.Context)
+	GetUserBalance(ctx context.Context, c *gin.Context)
+	Withdraw(ctx context.Context, c *gin.Context)
+	ListWithdrawals(ctx context.Context, c *gin.Context)
 }
 
 func NewHandler(userService service.UserService, orderService service.OrderService, accrualService service.AccrualService, orderQueryService query.OrderQueryService) Handler {
@@ -67,10 +68,14 @@ func NewHandler(userService service.UserService, orderService service.OrderServi
 	}
 }
 
-func (h *handler) Register(c *gin.Context) {
+func (h *handler) Register(ctx context.Context, c *gin.Context) {
 	body := User{}
 	err := c.ShouldBindBodyWithJSON(&body)
-	userID, err := h.userService.Register(body.Login, body.PassHash)
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	userID, err := h.userService.Register(ctx, body.Login, body.PassHash)
 
 	if err != nil {
 		if errors.Is(err, service.ErrUserExists) {
@@ -85,10 +90,14 @@ func (h *handler) Register(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-func (h *handler) Authenticate(c *gin.Context) {
+func (h *handler) Authenticate(ctx context.Context, c *gin.Context) {
 	body := User{}
 	err := c.ShouldBindBodyWithJSON(&body)
-	userID, err := h.userService.Authenticate(body.Login, body.PassHash)
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	userID, err := h.userService.Authenticate(ctx, body.Login, body.PassHash)
 
 	if err != nil {
 		c.AbortWithStatus(http.StatusUnauthorized)
@@ -99,7 +108,7 @@ func (h *handler) Authenticate(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-func (h *handler) CreateOrder(c *gin.Context) {
+func (h *handler) CreateOrder(ctx context.Context, c *gin.Context) {
 	var orderID string
 	err := c.BindPlain(&orderID)
 	if err != nil {
@@ -113,14 +122,14 @@ func (h *handler) CreateOrder(c *gin.Context) {
 
 	userID := getUserID(c)
 	go func() {
-		err2 := h.accrualService.ProcessOrder(orderID, userID)
+		err2 := h.accrualService.ProcessOrder(ctx, orderID, userID)
 		if err2 != nil {
 			// TODO: add logging
 			fmt.Println("accrual points err:", err2)
 		}
 	}()
 
-	err = h.orderService.CreateOrder(orderID, userID)
+	err = h.orderService.CreateOrder(ctx, orderID, userID)
 	if err != nil {
 		if errors.Is(err, service.ErrOrderExists) {
 			c.Status(http.StatusOK)
@@ -130,20 +139,22 @@ func (h *handler) CreateOrder(c *gin.Context) {
 			c.AbortWithStatus(http.StatusConflict)
 		}
 		c.AbortWithStatus(http.StatusInternalServerError)
+		return
 	}
 
 	c.Status(http.StatusAccepted)
 }
 
-func (h *handler) ListOrders(c *gin.Context) {
+func (h *handler) ListOrders(ctx context.Context, c *gin.Context) {
 	userID := getUserID(c)
-	orders, err := h.orderQueryService.ListOrders(userID)
+	orders, err := h.orderQueryService.ListOrders(ctx, userID)
 	if err != nil {
 		if errors.Is(err, service.ErrOrdersNotFound) {
 			c.Status(http.StatusNoContent)
 			return
 		}
 		c.AbortWithStatus(http.StatusInternalServerError)
+		return
 	}
 
 	responseData := make([]Order, 0, len(orders))
@@ -164,11 +175,12 @@ func (h *handler) ListOrders(c *gin.Context) {
 	c.Data(http.StatusOK, "application/json", response)
 }
 
-func (h *handler) GetUserBalance(c *gin.Context) {
+func (h *handler) GetUserBalance(ctx context.Context, c *gin.Context) {
 	userID := getUserID(c)
-	balance, err := h.orderService.UserBalance(userID)
+	balance, err := h.orderService.UserBalance(ctx, userID)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
+		return
 	}
 
 	response, err := json.Marshal(UserBalance{
@@ -182,34 +194,37 @@ func (h *handler) GetUserBalance(c *gin.Context) {
 	c.Data(http.StatusOK, "application/json", response)
 }
 
-func (h *handler) Withdraw(c *gin.Context) {
+func (h *handler) Withdraw(ctx context.Context, c *gin.Context) {
 	userID := getUserID(c)
 
 	body := WithdrawRequest{}
 	err := c.ShouldBindBodyWithJSON(&body)
-
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+
 	if validateOrder(body.Order) != nil {
 		c.AbortWithStatus(http.StatusUnprocessableEntity)
 		return
 	}
 
-	err = h.orderService.Withdraw(body.Order, userID, body.Points)
+	err = h.orderService.Withdraw(ctx, body.Order, userID, body.Points)
 	if err != nil {
 		if errors.Is(err, service.ErrNotEnoughPoints) {
 			c.AbortWithStatus(402)
 			return
 		}
 		c.AbortWithStatus(http.StatusInternalServerError)
+		return
 	}
+	c.Status(http.StatusOK)
 }
 
-func (h *handler) ListWithdrawals(c *gin.Context) {
+func (h *handler) ListWithdrawals(ctx context.Context, c *gin.Context) {
 	userID := getUserID(c)
-	withdrawals, err := h.orderService.ListWithdrawals(userID)
+	ctx = withUserID(ctx, userID)
+	withdrawals, err := h.orderService.ListWithdrawals(ctx, userID)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -278,4 +293,8 @@ func validateLuhn(number string) bool {
 
 func getUserID(c *gin.Context) string {
 	return c.GetString(cookie.GetUserKey())
+}
+
+func withUserID(ctx context.Context, userID string) context.Context {
+	return context.WithValue(ctx, "userID", userID)
 }

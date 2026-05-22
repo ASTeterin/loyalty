@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"errors"
 	"github.com/gofrs/uuid"
 	"time"
@@ -27,7 +28,7 @@ type Order struct {
 }
 
 type OrderRepository interface {
-	Store(order Order) error
-	GetByOrderID(orderID string) (*Order, error)
-	ListOrders(userID string) ([]Order, error)
+	Store(ctx context.Context, order Order) error
+	GetByOrderID(ctx context.Context, orderID string) (*Order, error)
+	ListOrders(ctx context.Context, userID string) ([]Order, error)
 }

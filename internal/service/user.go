@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"golang.org/x/crypto/bcrypt"
 
@@ -13,8 +14,8 @@ var (
 )
 
 type UserService interface {
-	Register(originalURL, userID string) (*string, error)
-	Authenticate(login, password string) (*string, error)
+	Register(ctx context.Context, originalURL, userID string) (*string, error)
+	Authenticate(ctx context.Context, login, password string) (*string, error)
 }
 
 func NewUserService(repo model.UserRepository) UserService {
@@ -27,8 +28,8 @@ type userService struct {
 	repo model.UserRepository
 }
 
-func (s *userService) Register(login, password string) (*string, error) {
-	_, err := s.repo.GetByLogin(login)
+func (s *userService) Register(ctx context.Context, login, password string) (*string, error) {
+	_, err := s.repo.GetByLogin(ctx, login)
 	if err != nil {
 		if errors.Is(err, model.ErrUserNotFound) {
 			hash, err2 := hashPassword(password)
@@ -40,7 +41,7 @@ func (s *userService) Register(login, password string) (*string, error) {
 				return nil, err2
 			}
 			user := model.NewUser(id, login, hash)
-			err2 = s.repo.Store(user)
+			err2 = s.repo.Store(ctx, user)
 			strID := id.String()
 			return &strID, err2
 		}
@@ -49,8 +50,8 @@ func (s *userService) Register(login, password string) (*string, error) {
 	return nil, ErrUserExists
 }
 
-func (s *userService) Authenticate(login, password string) (*string, error) {
-	user, err := s.repo.GetByLogin(login)
+func (s *userService) Authenticate(ctx context.Context, login, password string) (*string, error) {
+	user, err := s.repo.GetByLogin(ctx, login)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +71,6 @@ func hashPassword(password string) (string, error) {
 	return string(hashedPassword), nil
 }
 
-// Проверка пароля
 func checkPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil

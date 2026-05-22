@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"errors"
 	"github.com/gofrs/uuid"
 )
@@ -22,8 +23,8 @@ type User struct {
 
 type UserRepository interface {
 	NextUserID() (uuid.UUID, error)
-	Store(user User) error
-	GetByLogin(login string) (*User, error)
+	Store(ctx context.Context, user User) error
+	GetByLogin(ctx context.Context, login string) (*User, error)
 }
 
 func NewUser(id uuid.UUID, login, passHash string) User {

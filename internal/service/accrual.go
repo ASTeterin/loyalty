@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/ASTeterin/loyalty/internal/model"
@@ -24,7 +25,7 @@ type OrderResponse struct {
 }
 
 type AccrualService interface {
-	ProcessOrder(orderID string, userID string) error
+	ProcessOrder(ctx context.Context, orderID string, userID string) error
 }
 
 type accrualService struct {
@@ -45,7 +46,7 @@ func NewAccrualService(repo model.OrderRepository, baseURL string, balanceRepo m
 	}
 }
 
-func (a *accrualService) ProcessOrder(orderID string, userID string) error {
+func (a *accrualService) ProcessOrder(ctx context.Context, orderID string, userID string) error {
 	results := make(chan *OrderResponse, 10)
 	errors := make(chan error, 10)
 
@@ -58,7 +59,7 @@ func (a *accrualService) ProcessOrder(orderID string, userID string) error {
 				return nil
 			}
 
-			err := a.applyOrderStatus(orderID, order.Status)
+			err := a.applyOrderStatus(ctx, orderID, order.Status)
 			if err != nil {
 				errors <- err
 			}
@@ -130,8 +131,8 @@ func (a *accrualService) startOrderPolling(orderID string, interval, duration ti
 	}
 }
 
-func (a *accrualService) applyOrderStatus(orderID string, orderStatus string) error {
-	orderData, err := a.orderRepo.GetByOrderID(orderID)
+func (a *accrualService) applyOrderStatus(ctx context.Context, orderID string, orderStatus string) error {
+	orderData, err := a.orderRepo.GetByOrderID(ctx, orderID)
 	if err != nil {
 		return err
 	}
@@ -141,7 +142,7 @@ func (a *accrualService) applyOrderStatus(orderID string, orderStatus string) er
 		return err
 	}
 	orderData.Status = status
-	return a.orderRepo.Store(*orderData)
+	return a.orderRepo.Store(ctx, *orderData)
 }
 
 func (a *accrualService) applyBalanceTransaction(orderID string, accrual float64, userID string) error {

@@ -34,8 +34,7 @@ func (repo *balanceTransactionRepo) Store(t model.BalanceTransaction) error {
 	return err
 }
 
-func (repo *balanceTransactionRepo) ListUserTransactions(userID string, onlyWithdrawal bool) ([]model.BalanceTransaction, error) {
-	ctx := context.TODO()
+func (repo *balanceTransactionRepo) ListUserTransactions(ctx context.Context, userID string, onlyWithdrawal bool) ([]model.BalanceTransaction, error) {
 	query := `SELECT order_id, user_id, points, created_at FROM balance_transaction WHERE user_id = $1`
 	if onlyWithdrawal {
 		query += " AND points < 0"

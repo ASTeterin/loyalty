@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"github.com/ASTeterin/loyalty/internal/cookie"
@@ -12,6 +13,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	appConfig "github.com/ASTeterin/loyalty/internal/config"
 	"github.com/golang-migrate/migrate/v4"
@@ -29,6 +31,11 @@ func main() {
 	}
 	defer dbConn.Close()
 	migrateDB(dbConn)
+
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
+
 	repo := db.NewUserRepository(dbConn)
 	userService := service.NewUserService(repo)
 	orderRepo := db.NewOrderRepository(dbConn)
@@ -43,25 +50,25 @@ func main() {
 	r.Use(cookie.CookieHandler(config.SigningKey))
 
 	r.POST("/api/user/register", func(c *gin.Context) {
-		h.Register(c)
+		h.Register(ctx, c)
 	})
 	r.POST("/api/user/login", func(c *gin.Context) {
-		h.Authenticate(c)
+		h.Authenticate(ctx, c)
 	})
 	r.POST("/api/user/orders", func(c *gin.Context) {
-		h.CreateOrder(c)
+		h.CreateOrder(ctx, c)
 	})
 	r.GET("/api/user/orders", func(c *gin.Context) {
-		h.ListOrders(c)
+		h.ListOrders(ctx, c)
 	})
 	r.GET("/api/user/balance", func(c *gin.Context) {
-		h.GetUserBalance(c)
+		h.GetUserBalance(ctx, c)
 	})
 	r.POST("/api/user/balance/withdraw", func(c *gin.Context) {
-		h.Withdraw(c)
+		h.Withdraw(ctx, c)
 	})
 	r.GET("/api/user/withdrawals", func(c *gin.Context) {
-		h.ListWithdrawals(c)
+		h.ListWithdrawals(ctx, c)
 	})
 	if err := r.Run(config.AppAddr); err != nil {
 		log.Fatalf("failed to run server: %v", err)

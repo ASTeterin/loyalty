@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"errors"
 	"github.com/gofrs/uuid"
 	"time"
@@ -16,7 +17,7 @@ type BalanceTransaction struct {
 }
 
 type BalanceTransactionRepository interface {
-	ListUserTransactions(userID string, onlyWithdrawal bool) ([]BalanceTransaction, error)
+	ListUserTransactions(ctx context.Context, userID string, onlyWithdrawal bool) ([]BalanceTransaction, error)
 	Store(t BalanceTransaction) error
 	GetByOrderID(orderID string) (*BalanceTransaction, error)
 }

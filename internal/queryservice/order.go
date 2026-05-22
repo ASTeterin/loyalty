@@ -8,7 +8,7 @@ import (
 )
 
 type OrderQueryService interface {
-	ListOrders(userID string) ([]OrderDTO, error)
+	ListOrders(ctx context.Context, userID string) ([]OrderDTO, error)
 }
 
 type OrderDTO struct {
@@ -29,8 +29,7 @@ func NewOrderQueryService(db *sql.DB) OrderQueryService {
 	return q
 }
 
-func (repo *orderQueryService) ListOrders(userID string) ([]OrderDTO, error) {
-	ctx := context.TODO()
+func (repo *orderQueryService) ListOrders(ctx context.Context, userID string) ([]OrderDTO, error) {
 	query := `SELECT o.id, o.status, t.points, o.created_at FROM orders o
 				INNER JOIN balance_transaction t ON o.id = t.order_id
    				WHERE o.user_id = $1`

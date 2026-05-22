@@ -23,8 +23,7 @@ func (repo *userRepo) NextUserID() (uuid.UUID, error) {
 	return uuid.NewV1()
 }
 
-func (repo *userRepo) Store(user model.User) error {
-	ctx := context.TODO()
+func (repo *userRepo) Store(ctx context.Context, user model.User) error {
 	const query = `
         INSERT INTO users (id, login, pass_hash)
         VALUES ($1, $2, $3)
@@ -35,8 +34,7 @@ func (repo *userRepo) Store(user model.User) error {
 	return err
 }
 
-func (repo *userRepo) GetByLogin(login string) (*model.User, error) {
-	ctx := context.TODO()
+func (repo *userRepo) GetByLogin(ctx context.Context, login string) (*model.User, error) {
 	query := `SELECT id, login, pass_hash FROM users WHERE login = $1`
 	user := model.User{}
 	err := repo.db.QueryRowContext(ctx, query, login).Scan(
