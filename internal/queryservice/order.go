@@ -30,9 +30,15 @@ func NewOrderQueryService(db *sql.DB) OrderQueryService {
 }
 
 func (repo *orderQueryService) ListOrders(ctx context.Context, userID string) ([]OrderDTO, error) {
-	query := `SELECT o.id, o.status, t.points, o.created_at FROM orders o
-				INNER JOIN balance_transaction t ON o.id = t.order_id
-   				WHERE o.user_id = $1`
+	query := `
+			SELECT 
+    			o.id, 
+    			o.status, 
+    			COALESCE(t.points, 0) AS points, 
+    			o.created_at
+			FROM orders o
+				LEFT JOIN balance_transaction t ON o.id = t.order_id
+   			WHERE o.user_id = $1`
 
 	orders := []OrderDTO{}
 	rows, err := repo.db.QueryContext(ctx, query, userID)

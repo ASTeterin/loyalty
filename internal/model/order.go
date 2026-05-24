@@ -30,5 +30,4 @@ type Order struct {
 type OrderRepository interface {
 	Store(ctx context.Context, order Order) error
 	GetByOrderID(ctx context.Context, orderID string) (*Order, error)
-	ListOrders(ctx context.Context, userID string) ([]Order, error)
 }

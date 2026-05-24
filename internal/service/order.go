@@ -18,7 +18,6 @@ var (
 
 type OrderService interface {
 	CreateOrder(ctx context.Context, orderID string, userID string) error
-	ListOrders(ctx context.Context, userID string) ([]model.Order, error)
 	UserBalance(ctx context.Context, userID string) (UserBalance, error)
 	Withdraw(ctx context.Context, orderID string, userID string, points float64) error
 	ListWithdrawals(ctx context.Context, userID string) ([]WithdrawalData, error)
@@ -70,17 +69,6 @@ func (s *orderService) CreateOrder(ctx context.Context, orderID string, userID s
 		return ErrOrderExists
 	}
 	return ErrOrderCreatedAnotherUser
-}
-
-func (s *orderService) ListOrders(ctx context.Context, userID string) ([]model.Order, error) {
-	orders, err := s.orderRepository.ListOrders(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	if len(orders) == 0 {
-		return nil, ErrOrdersNotFound
-	}
-	return orders, nil
 }
 
 func (s *orderService) UserBalance(ctx context.Context, userID string) (UserBalance, error) {

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ASTeterin/loyalty/internal/cookie"
+	"github.com/ASTeterin/loyalty/internal/logger"
 	query "github.com/ASTeterin/loyalty/internal/queryservice"
 	"github.com/ASTeterin/loyalty/internal/service"
 	"github.com/gin-gonic/gin"
@@ -124,8 +125,7 @@ func (h *handler) CreateOrder(ctx context.Context, c *gin.Context) {
 	go func() {
 		err2 := h.accrualService.ProcessOrder(ctx, orderID, userID)
 		if err2 != nil {
-			// TODO: add logging
-			fmt.Println("accrual points err:", err2)
+			logger.LogErrorWithStack(err2, "accrual points error")
 		}
 	}()
 
