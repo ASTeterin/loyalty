@@ -33,7 +33,7 @@ func main() {
 	migrateDB(dbConn)
 
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	repo := db.NewUserRepository(dbConn)
