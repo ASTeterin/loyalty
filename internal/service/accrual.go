@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/ASTeterin/loyalty/internal/logger"
 	"github.com/ASTeterin/loyalty/internal/model"
 	"github.com/gofrs/uuid"
 	"io"
@@ -71,7 +72,7 @@ func (a *accrualService) ProcessOrder(ctx context.Context, orderID string, userI
 			if !ok {
 				continue
 			}
-			fmt.Printf("Error: %v\n", err)
+			logger.LogErrorWithStack(err, "Error: %v\n")
 		}
 	}
 }
